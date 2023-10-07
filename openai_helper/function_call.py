@@ -1,7 +1,6 @@
 import os
 import openai
 import json
-import asyncio
 
 
 SYSTEM_PROMPT = """
