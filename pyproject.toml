@@ -6,7 +6,7 @@ name = "openai_helper"
 version = "0.1.0"
 description = "A helper library for OpenAI."
 authors = ["Yibo Wei david_wyb2001@outlook"]
-license = "MIT"
+license = { text = "MIT" }
 readme = "README.md"
 
 [project.urls]
