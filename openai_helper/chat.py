@@ -28,7 +28,7 @@ class ChatSession:
         }
 
         # add functions parameter only if self.function_call.functions contains any functions
-        if self.function_call.functions:
+        if self.function_call and self.function_call.functions:
             args["functions"] = [
                 f["info"] for f in self.function_call.functions.values()
             ]
