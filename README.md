@@ -4,7 +4,11 @@ This is a simple wrapper to the OpenAI API. You can easily define custom functio
 
 ## Usage
 
-Currently you can only clone the git repository and import the library inside the repository directory.
+To install the library, run the following command in the terminal:
+
+```sh
+pip install git+https://github.com/Microwave-WYB/openai_helper.git
+```
 
 Let's have a look at the example in [quickstart.py](./quickstart.py):
 
