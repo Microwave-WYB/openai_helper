@@ -150,6 +150,8 @@ class ChatSession:
                         print(f"    {arg}: {val}")
 
                     confirmation = None
+                    if no_confirm:
+                        confirmation = "y"
                     while confirmation not in ["y", "n", ""] and not no_confirm:
                         confirmation = input("Confirm function call? [Y/n]: ").lower()
 

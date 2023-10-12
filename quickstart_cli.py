@@ -25,4 +25,4 @@ If the user did not provide a range, you need to ask the user for a range.
 """
 message = {"role": "system", "content": system_prompt}
 chat = ChatSession(functions, model="gpt-4", verbose=True)
-chat.start(messages=[message], no_confirm=False)
+chat.start(messages=[message], no_confirm=True)
