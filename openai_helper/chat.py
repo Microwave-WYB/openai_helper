@@ -11,7 +11,7 @@ class ChatSession:
         model: str = "gpt-3.5-turbo",
         verbose: bool = False,
     ) -> None:
-        self.function_call = functions
+        self.functions = functions
         self.model = model
         self.verbose = verbose
 
@@ -34,9 +34,9 @@ class ChatSession:
             "messages": messages,
         }
 
-        if self.function_call and self.function_call.functions:
+        if self.functions and self.functions.functions:
             args["functions"] = [
-                f["info"] for f in self.function_call.functions.values()
+                f["info"] for f in self.functions.functions.values()
             ]
 
         try:
@@ -79,7 +79,7 @@ class ChatSession:
         """
         function_name = function_call["name"]
         function_args = function_call["arguments"]
-        function_output = self.function_call.call(function_name, **function_args)
+        function_output = self.functions.call(function_name, **function_args)
 
         if verbose:
             print(f"Function call: {function_call}")
