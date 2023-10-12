@@ -1,6 +1,6 @@
 import time
 import openai, json
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Tuple
 from .function_call import OpenAIFunctionCall
 
 
@@ -18,16 +18,22 @@ class ChatSession:
     def send_messages(
         self,
         messages: List[Dict[str, str]],
-        handle_function_call: bool = True,
         **kwargs,
-    ) -> Dict:
-        # create a dictionary of arguments
+    ) -> Tuple[Dict, Union[None, Dict]]:
+        """
+        Send messages using OpenAI API. Allow all OpenAI API keyword args.
+
+        Args:
+            messages (List[Dict[str, str]]): List of messages to send
+
+        Returns:
+            Tuple[Dict, Union[None, Dict]]: response, function_call_info
+        """
         args = {
             "model": self.model,
             "messages": messages,
         }
 
-        # add functions parameter only if self.function_call.functions contains any functions
         if self.function_call and self.function_call.functions:
             args["functions"] = [
                 f["info"] for f in self.function_call.functions.values()
@@ -43,44 +49,44 @@ class ChatSession:
             time.sleep(3)
             return self.send_messages(messages, **kwargs)
 
-        if handle_function_call and self.function_call:
-            response = self.handle_function(response, messages, **kwargs)
+        # Extract the function call if present
+        function_call_info = None
+        assistant_response = response["choices"][0]["message"]
+        if "function_call" in assistant_response:
+            function_call_info = {
+                "name": assistant_response["function_call"]["name"],
+                "arguments": json.loads(
+                    assistant_response["function_call"]["arguments"]
+                ),
+            }
 
-        return response
+        return response, function_call_info
 
     def handle_function(
-        self, response: Dict, messages: List[Dict[str, str]], **kwargs
+        self,
+        function_call: Dict,
+        verbose: bool = False,
     ) -> Dict:
-        assistant_response = response["choices"][0]["message"]
+        """
+        Handle a function call from the OpenAI API.
 
-        if assistant_response.get("function_call"):
-            function_name = assistant_response["function_call"]["name"]
-            function_args = json.loads(assistant_response["function_call"]["arguments"])
-            function_output = self.function_call.call(function_name, **function_args)
+        Args:
+            function_call (Dict): Function call info from the OpenAI API
+            verbose (bool, optional): Whether to print debug info. Defaults to False.
 
-            # If verbose is True, print the function call response and output
-            if self.verbose:
-                print(f"Function call response: {assistant_response}")
-                print(f"Function output: {function_output}")
+        Returns:
+            Dict: _description_
+        """
+        function_name = function_call["name"]
+        function_args = function_call["arguments"]
+        function_output = self.function_call.call(function_name, **function_args)
 
-            # Add the previous message and function response to the messages list
-            messages.append(assistant_response)
-            messages.append(
-                {
-                    "role": "function",
-                    "name": function_name,
-                    "content": function_output,
-                }
-            )
+        if verbose:
+            print(f"Function call: {function_call}")
+            print(f"Function output: {function_output}")
 
-            # Recall the API with the function output
-            try:
-                response = openai.ChatCompletion.create(
-                    model=self.model, messages=messages, **kwargs
-                )
-            except openai.error.RateLimitError:
-                print("Rate limit exceeded, waiting 3 seconds...")
-                time.sleep(3)
-                return self.send_messages(messages, **kwargs)
-
-        return response
+        return {
+            "role": "function",
+            "name": function_name,
+            "content": function_output,
+        }
