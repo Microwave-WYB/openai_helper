@@ -92,7 +92,7 @@ class ChatSession:
             verbose (bool, optional): Whether to print debug info. Defaults to False.
 
         Returns:
-            Dict: _description_
+            Dict: A dictionary containing the function's role, name, and content, which includes both the input arguments and the output.
         """
         function_name = function_call["name"]
         function_args = function_call["arguments"]
@@ -102,10 +102,15 @@ class ChatSession:
             print(f"Function call: {function_call}")
             print(f"Function output: {function_output}")
 
+        # Prepare the content string with input arguments and output
+        content = (
+            f"Function input:\n{function_args}\nFunction output:\n{function_output}"
+        )
+
         return {
             "role": "function",
             "name": function_name,
-            "content": f"function_output:\n{function_output}",
+            "content": content,
         }
 
     def start(
