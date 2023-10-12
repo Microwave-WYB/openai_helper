@@ -137,8 +137,8 @@ class ChatSession:
                 if assistant_message is not None:
                     print(_ASSISTANT_PROMPT.format(content=assistant_message))
 
-                # Handle function call
-                if function_call_info:
+                # Continuously handle function calls until there are none
+                while function_call_info:
                     print(f"Calling function: {function_call_info['name']}")
                     print("Arguments:")
                     for arg, val in function_call_info["arguments"].items():
@@ -155,16 +155,15 @@ class ChatSession:
                         messages.append(function_response)
 
                         # Send the updated messages back to the model
-                        follow_up_response, _ = self.send_messages(messages)
+                        response, function_call_info = self.send_messages(messages)
 
                         # Print out the response content
-                        follow_up_message = follow_up_response["choices"][0]["message"][
-                            "content"
-                        ]
+                        follow_up_message = response["choices"][0]["message"]["content"]
                         print(_ASSISTANT_PROMPT.format(content=follow_up_message))
 
                     else:
                         print("Function call skipped.")
+                        break  # If user skips the function call, break from the function handling loop
 
             except EOFError:
                 print("Ending chat session.")
