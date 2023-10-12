@@ -3,6 +3,9 @@ import openai, json
 from typing import Dict, Union, List, Tuple
 from .function_call import OpenAIFunctionCall
 
+_ASSISTANT_PROMPT = "Assistant:\n    {content}"
+_USER_PROMPT = "User:\n    "
+
 
 class ChatSession:
     def __init__(
@@ -35,9 +38,7 @@ class ChatSession:
         }
 
         if self.functions and self.functions.functions:
-            args["functions"] = [
-                f["info"] for f in self.functions.functions.values()
-            ]
+            args["functions"] = [f["info"] for f in self.functions.functions.values()]
 
         try:
             response = openai.ChatCompletion.create(
@@ -90,3 +91,68 @@ class ChatSession:
             "name": function_name,
             "content": function_output,
         }
+
+    def start(
+        self, messages: List[Dict[str, str]] = [], no_confirm: bool = False
+    ) -> None:
+        """
+        Start a chat session.
+
+        Args:
+            messages (List[Dict[str, str]], optional): Pre-existing messages if there are any. Defaults to [].
+            no_confirm (bool, optional): Whether to skip confirmation for function calls. Defaults to False.
+        """
+        print("Starting chat session. Type 'exit' to exit.")
+
+        while True:
+            try:
+                # Get input from the user
+                user_message = input(_USER_PROMPT.format(content=""))
+                if user_message.lower() == "exit":
+                    print("Ending chat session.")
+                    break
+
+                # Send the message to the API
+                messages.append({"role": "user", "content": user_message})
+                response, function_call_info = self.send_messages(messages)
+
+                # Print out the response content
+                assistant_message = response["choices"][0]["message"]["content"]
+                if assistant_message is not None:
+                    print(_ASSISTANT_PROMPT.format(content=assistant_message))
+
+                # Handle function call
+                if function_call_info:
+                    print(f"Calling function: {function_call_info['name']}")
+                    print("Arguments:")
+                    for arg, val in function_call_info["arguments"].items():
+                        print(f"    {arg}: {val}")
+
+                    confirmation = None
+                    while confirmation not in ["y", "n", ""] and not no_confirm:
+                        confirmation = input("Confirm function call? [Y/n]: ").lower()
+
+                    if confirmation in ["y", ""]:
+                        function_response = self.handle_function(
+                            function_call_info, self.verbose
+                        )
+                        messages.append(function_response)
+
+                        # Send the updated messages back to the model
+                        follow_up_response, _ = self.send_messages(messages)
+
+                        # Print out the response content
+                        follow_up_message = follow_up_response["choices"][0]["message"][
+                            "content"
+                        ]
+                        print(f"Assistant: {follow_up_message}")
+
+                    else:
+                        print("Function call skipped.")
+
+            except EOFError:
+                print("Ending chat session.")
+                break
+            except KeyboardInterrupt:
+                print("Ending chat session.")
+                break
