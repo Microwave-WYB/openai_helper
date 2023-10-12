@@ -105,7 +105,7 @@ class ChatSession:
         return {
             "role": "function",
             "name": function_name,
-            "content": function_output,
+            "content": f"function_output:\n{function_output}",
         }
 
     def start(
@@ -161,7 +161,7 @@ class ChatSession:
                         follow_up_message = follow_up_response["choices"][0]["message"][
                             "content"
                         ]
-                        print(f"Assistant: {follow_up_message}")
+                        print(_ASSISTANT_PROMPT.format(content=follow_up_message))
 
                     else:
                         print("Function call skipped.")
