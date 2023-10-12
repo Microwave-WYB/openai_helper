@@ -166,7 +166,8 @@ class ChatSession:
 
                         # Print out the response content
                         follow_up_message = response["choices"][0]["message"]["content"]
-                        print(_ASSISTANT_PROMPT.format(content=follow_up_message))
+                        if follow_up_message is not None:
+                            print(_ASSISTANT_PROMPT.format(content=follow_up_message))
 
                     else:
                         print("Function call skipped.")
