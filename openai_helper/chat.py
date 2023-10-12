@@ -1,10 +1,26 @@
 import time
-import openai, json
+import openai
+import json
+import tiktoken
 from typing import Dict, Union, List, Tuple
 from .function_call import OpenAIFunctionCall
 
 _ASSISTANT_PROMPT = "Assistant:\n    {content}"
 _USER_PROMPT = "User:\n    "
+
+
+def count_token(input: str) -> int:
+    """
+    Count the number of tokens in a string.
+
+    Args:
+        input (str): Input string.
+
+    Returns:
+        int: Number of tokens.
+    """
+    enc = tiktoken.get_encoding("cl100k_base")
+    return len(enc.encode(input))
 
 
 class ChatSession:
