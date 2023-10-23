@@ -117,7 +117,7 @@ class ChatSession:
         self, messages: List[Dict[str, str]] = [], no_confirm: bool = False
     ) -> None:
         """
-        Start a chat session.
+        Start a chat session in the terminal.
 
         Args:
             messages (List[Dict[str, str]], optional): Pre-existing messages if there are any. Defaults to [].
