@@ -8,7 +8,10 @@ description = "A helper library for OpenAI."
 authors = [{"name" = "Yibo Wei", "email" = "david_wyb2001@outlook.com"}]
 license = { text = "MIT" }
 readme = "README.md"
-requirements = { file = "requirements.txt" }
+dependencies = [
+    "openai>=0.28.1",
+    "tiktoken>=0.5.1"
+]
 
 [project.urls]
 Home = "https://github.com/Microwave-WYB/openai_helper"
