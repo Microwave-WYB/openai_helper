@@ -55,8 +55,12 @@ class HistoryManager:
         ], "Compacting method must be either 'fifo' or 'summarize'"
         assert keep_top >= 0, "keep_top must be greater than or equal to 0"
         assert keep_bottom >= 0, "keep_bottom must be greater than or equal to 0"
-        assert token_threshold >= 0, "token_threshold must be greater than or equal to 0"
-        assert token_threshold <= max_tokens, "token_threshold must be less than max_tokens"
+        assert (
+            token_threshold >= 0
+        ), "token_threshold must be greater than or equal to 0"
+        assert (
+            token_threshold <= max_tokens
+        ), "token_threshold must be less than max_tokens"
         self.token_threadhold = token_threshold
         self.max_tokens = max_tokens
         self.compacting_method = compacting_method
@@ -71,7 +75,7 @@ class HistoryManager:
 
         Returns:
             int: Total number of tokens.
-        """ 
+        """
         return sum(count_token(msg["content"]) for msg in self.messages)
 
     def compact(self) -> None:
@@ -115,9 +119,19 @@ class HistoryManager:
         Args:
             message (Dict[str, str]): Message to add.
         """
-        assert message.keys() == {"role", "content"}, "Message must have role and content keys"
-        assert message["role"] in ["system", "user", "assistant", "function"], "Message role must be one of 'system', 'user', 'assistant', or 'function'"
-        assert count_token(message["content"]) <= self.max_tokens, "Message exceeds maximum token count"
+        assert message.keys() == {
+            "role",
+            "content",
+        }, "Message must have role and content keys"
+        assert message["role"] in [
+            "system",
+            "user",
+            "assistant",
+            "function",
+        ], "Message role must be one of 'system', 'user', 'assistant', or 'function'"
+        assert (
+            count_token(message["content"]) <= self.max_tokens
+        ), "Message exceeds maximum token count"
         self.messages.append(message)
         self.compact()
 
@@ -213,7 +227,7 @@ class ChatSession:
         }
 
     def start(
-        self, messages: List[Dict[str, str]] = [], no_confirm: bool = False
+        self, messages: List[Dict[str, str]] = [], no_confirm: bool = False, **kwargs
     ) -> None:
         """
         Start a chat session in the terminal.
