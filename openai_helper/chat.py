@@ -29,8 +29,8 @@ CompactingMethod = Literal["fifo", "summarize"]
 class HistoryManager:
     def __init__(
         self,
-        token_threshold: int = 3000,
-        max_tokens: int = 8000,
+        token_threshold: int = 2000,
+        max_tokens: int = 4000,
         compacting_method: CompactingMethod = "fifo",
         keep_top: int = 1,
         keep_bottom: int = 6,
@@ -41,8 +41,8 @@ class HistoryManager:
         Initialize a HistoryManager object.
 
         Args:
-            token_threshold (int, optional): Maximum token before compacting. Defaults to 3000.
-            max_tokens (int, optional): Maximum token in the history. Defaults to 8000.
+            token_threshold (int, optional): Maximum token before compacting. Defaults to 2000.
+            max_tokens (int, optional): Maximum token in the history. Defaults to 4000.
             compacting_method (CompactingMethod, optional): How to compact the history. Defaults to "fifo".
             keep_top (int, optional): Top messages to keep. Defaults to 1.
             keep_bottom (int, optional): Bottom message to keep. Set to 0 to use token_threshold. Defaults to 6.
