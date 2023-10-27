@@ -2,7 +2,7 @@ import time
 import openai
 import json
 import tiktoken
-from typing import Dict, Union, List, Tuple
+from typing import Dict, Union, List, Tuple, Literal
 from .function_call import OpenAIFunctionCall
 
 _ASSISTANT_PROMPT = "Assistant:\n    {content}"
@@ -21,6 +21,117 @@ def count_token(input: str) -> int:
     """
     enc = tiktoken.get_encoding("cl100k_base")
     return len(enc.encode(input))
+
+
+CompactingMethod = Literal["fifo", "summarize"]
+
+
+class HistoryManager:
+    def __init__(
+        self,
+        token_threshold: int = 2000,
+        max_tokens: int = 4000,
+        compacting_method: CompactingMethod = "fifo",
+        keep_top: int = 1,
+        keep_bottom: int = 6,
+        messages: List[Dict[str, str]] = [],
+        verbose: bool = False,
+    ) -> None:
+        """
+        Initialize a HistoryManager object.
+
+        Args:
+            token_threshold (int, optional): Maximum token before compacting. Defaults to 2000.
+            max_tokens (int, optional): Maximum token in the history. Defaults to 4000.
+            compacting_method (CompactingMethod, optional): How to compact the history. Defaults to "fifo".
+            keep_top (int, optional): Top messages to keep. Defaults to 1.
+            keep_bottom (int, optional): Bottom message to keep. Set to 0 to use token_threshold. Defaults to 6.
+            messages (List[Dict[str, str]], optional): Pre-existing messages if there are any. Defaults to [].
+            verbose (bool, optional): Defaults to False.
+        """
+        assert compacting_method in [
+            "fifo",
+            "summarize",
+        ], "Compacting method must be either 'fifo' or 'summarize'"
+        assert keep_top >= 0, "keep_top must be greater than or equal to 0"
+        assert keep_bottom >= 0, "keep_bottom must be greater than or equal to 0"
+        assert (
+            token_threshold >= 0
+        ), "token_threshold must be greater than or equal to 0"
+        assert (
+            token_threshold <= max_tokens
+        ), "token_threshold must be less than max_tokens"
+        self.token_threshold = token_threshold
+        self.max_tokens = max_tokens
+        self.compacting_method = compacting_method
+        self.keep_top = keep_top
+        self.keep_bottom = keep_bottom
+        self.verbose = verbose
+        self.messages = messages
+
+    def get_total_tokens(self) -> int:
+        """
+        Get the total number of tokens in the message history.
+
+        Returns:
+            int: Total number of tokens.
+        """
+        return sum(count_token(msg["content"]) for msg in self.messages)
+
+    def compact(self) -> None:
+        """
+        Compact the message history using the specified compacting method.
+        """
+
+        if self.compacting_method == "fifo":
+            total_tokens = self.get_total_tokens()
+            if total_tokens <= self.token_threshold:
+                # Not enough tokens to require compacting
+                if len(self.messages) > self.keep_top + self.keep_bottom:
+                    top_msgs = self.messages[: self.keep_top]
+                    bottom_msgs = self.messages[-self.keep_bottom :]
+                    self.messages = top_msgs + [
+                        msg for msg in bottom_msgs if msg not in top_msgs
+                    ]
+            else:
+                while (
+                    self.get_total_tokens() > self.token_threshold
+                    and len(self.messages) > self.keep_top
+                ):
+                    # Try to keep keep_top messages
+                    self.messages.pop(self.keep_top)
+
+                # If keep_top messages themselves exceed threshold, retain oldest messages
+                if self.get_total_tokens() > self.token_threshold:
+                    self.messages = self.messages[: self.keep_top]
+        elif self.compacting_method == "summarize":
+            raise NotImplementedError(
+                "Summarization compacting method not implemented yet."
+            )
+
+        if self.verbose:
+            print(f"Compacted messages. Current token count: {self.get_total_tokens()}")
+
+    def add(self, message: Dict[str, str]) -> None:
+        """
+        Add a message to the message history.
+
+        Args:
+            message (Dict[str, str]): Message to add.
+        """
+        assert "role" in message, "Message must have a role"
+        assert "content" in message, "Message must have content"
+        assert message["role"] in [
+            "system",
+            "user",
+            "assistant",
+            "function",
+        ], "Message role must be one of 'system', 'user', 'assistant', or 'function'"
+        assert (
+            count_token(message["content"]) <= self.max_tokens
+        ), "Message exceeds maximum token count"
+        self.messages.append(message)
+        self.compact()
 
 
 class ChatSession:
@@ -114,13 +225,13 @@ class ChatSession:
         }
 
     def start(
-        self, messages: List[Dict[str, str]] = [], no_confirm: bool = False
+        self, history_manager: HistoryManager, no_confirm: bool = False, **kwargs
     ) -> None:
         """
         Start a chat session in the terminal.
 
         Args:
-            messages (List[Dict[str, str]], optional): Pre-existing messages if there are any. Defaults to [].
+            history_manager (HistoryManager): History manager to use.
             no_confirm (bool, optional): Whether to skip confirmation for function calls. Defaults to False.
         """
         print("Starting chat session. Type 'exit' to exit.")
@@ -134,8 +245,8 @@ class ChatSession:
                     break
 
                 # Send the message to the API
-                messages.append({"role": "user", "content": user_message})
-                response, function_call_info = self.send_messages(messages)
+                history_manager.add({"role": "user", "content": user_message})
+                response, function_call_info = self.send_messages(history_manager.messages, **kwargs)
 
                 # Print out the response content
                 assistant_message = response["choices"][0]["message"]["content"]
@@ -159,10 +270,10 @@ class ChatSession:
                         function_response = self.handle_function(
                             function_call_info, self.verbose
                         )
-                        messages.append(function_response)
+                        history_manager.add(function_response)
 
                         # Send the updated messages back to the model
-                        response, function_call_info = self.send_messages(messages)
+                        response, function_call_info = self.send_messages(history_manager.messages, **kwargs)
 
                         # Print out the response content
                         follow_up_message = response["choices"][0]["message"]["content"]
