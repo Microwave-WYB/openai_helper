@@ -141,6 +141,14 @@ class ChatSession:
         model: str = "gpt-3.5-turbo",
         verbose: bool = False,
     ) -> None:
+        """
+        Initialize a ChatSession object.
+
+        Args:
+            functions (OpenAIFunctionCall, optional): Allowed functions. Defaults to None.
+            model (str, optional): Model name. Defaults to "gpt-3.5-turbo".
+            verbose (bool, optional): Whether to print debug info. Defaults to False.
+        """
         self.functions = functions
         self.model = model
         self.verbose = verbose
