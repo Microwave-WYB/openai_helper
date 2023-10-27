@@ -61,7 +61,7 @@ class HistoryManager:
         assert (
             token_threshold <= max_tokens
         ), "token_threshold must be less than max_tokens"
-        self.token_threadhold = token_threshold
+        self.token_threshold = token_threshold
         self.max_tokens = max_tokens
         self.compacting_method = compacting_method
         self.keep_top = keep_top
@@ -119,10 +119,8 @@ class HistoryManager:
         Args:
             message (Dict[str, str]): Message to add.
         """
-        assert message.keys() == {
-            "role",
-            "content",
-        }, "Message must have role and content keys"
+        assert "role" in message, "Message must have a role"
+        assert "content" in message, "Message must have content"
         assert message["role"] in [
             "system",
             "user",
@@ -227,13 +225,13 @@ class ChatSession:
         }
 
     def start(
-        self, messages: List[Dict[str, str]] = [], no_confirm: bool = False, **kwargs
+        self, history_manager: HistoryManager, no_confirm: bool = False, **kwargs
     ) -> None:
         """
         Start a chat session in the terminal.
 
         Args:
-            messages (List[Dict[str, str]], optional): Pre-existing messages if there are any. Defaults to [].
+            history_manager (HistoryManager): History manager to use.
             no_confirm (bool, optional): Whether to skip confirmation for function calls. Defaults to False.
         """
         print("Starting chat session. Type 'exit' to exit.")
@@ -247,8 +245,8 @@ class ChatSession:
                     break
 
                 # Send the message to the API
-                messages.append({"role": "user", "content": user_message})
-                response, function_call_info = self.send_messages(messages)
+                history_manager.add({"role": "user", "content": user_message})
+                response, function_call_info = self.send_messages(history_manager.messages, **kwargs)
 
                 # Print out the response content
                 assistant_message = response["choices"][0]["message"]["content"]
@@ -272,10 +270,10 @@ class ChatSession:
                         function_response = self.handle_function(
                             function_call_info, self.verbose
                         )
-                        messages.append(function_response)
+                        history_manager.add(function_response)
 
                         # Send the updated messages back to the model
-                        response, function_call_info = self.send_messages(messages)
+                        response, function_call_info = self.send_messages(history_manager.messages, **kwargs)
 
                         # Print out the response content
                         follow_up_message = response["choices"][0]["message"]["content"]
