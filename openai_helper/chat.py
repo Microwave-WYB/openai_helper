@@ -68,6 +68,7 @@ class HistoryManager:
         self.keep_bottom = keep_bottom
         self.verbose = verbose
         self.messages = messages
+        self.all_messages = messages
 
     def get_total_tokens(self) -> int:
         """
@@ -130,6 +131,7 @@ class HistoryManager:
         assert (
             count_token(message["content"]) <= self.max_tokens
         ), "Message exceeds maximum token count"
+        self.all_messages.append(message)
         self.messages.append(message)
         self.compact()
 
