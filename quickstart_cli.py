@@ -24,6 +24,15 @@ You are a random number generator assistant. You will help your user to generate
 If the user did not provide a range, you need to ask the user for a range.
 """
 message = {"role": "system", "content": system_prompt}
-history_manager = HistoryManager(3000, 8000, "fifo", 1, 4, [message], True)
+history_manager = HistoryManager(
+    token_threshold=3000,
+    max_tokens=8000,
+    compacting_method="fifo",
+    summarize_prompt="Summarize the conversation so far.",
+    keep_top=1,
+    keep_bottom=5,
+    messages=[message],
+    verbose=True,
+)
 chat = ChatSession(functions, model="gpt-4", verbose=True)
 chat.start(no_confirm=True, history_manager=history_manager)
