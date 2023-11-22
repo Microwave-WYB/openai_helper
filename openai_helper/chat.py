@@ -177,15 +177,10 @@ class ChatSession:
         if self.functions and self.functions.functions:
             args["functions"] = [f["info"] for f in self.functions.functions.values()]
 
-        try:
-            response = openai.ChatCompletion.create(
-                **args,
-                **kwargs,
-            )
-        except openai.error.RateLimitError:
-            print("Rate limit exceeded, waiting 3 seconds...")
-            time.sleep(3)
-            return self.send_messages(messages, **kwargs)
+        response = openai.ChatCompletion.create(
+            **args,
+            **kwargs,
+        )
 
         # Extract the function call if present
         function_call_info = None
