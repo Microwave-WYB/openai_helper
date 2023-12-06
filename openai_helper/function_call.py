@@ -1,7 +1,11 @@
+"""
+A module to handle calling functions.
+"""
+
 import os
-import openai
 import json
 
+import openai
 
 SYSTEM_PROMPT = """
 Given the function information , generate a JSON function object for an OpenAI API call.
@@ -90,12 +94,16 @@ def generate_function_object(function_name: str, docstring: str, cache: dict) ->
 
 
 class OpenAIFunctionCall:
+    """
+    A class to handle calling functions.
+    """
+
     def __init__(self, cache_file: str = "./function_cache.json"):
         self.functions = {}
         self.cache_file = cache_file
         self.cache = {}
         if os.path.exists(cache_file):
-            with open(cache_file, "r") as f:
+            with open(cache_file, "r", encoding="utf-8") as f:
                 self.cache = json.load(f)
 
     def register(self, func: callable) -> callable:
@@ -121,7 +129,7 @@ class OpenAIFunctionCall:
         """
         Save the cache to a file.
         """
-        with open(self.cache_file, "w") as f:
+        with open(self.cache_file, "w", encoding="utf-8") as f:
             json.dump(self.cache, f, indent=2)
 
     def call(self, function_name, *args, **kwargs) -> str:
