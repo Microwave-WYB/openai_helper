@@ -1,9 +1,13 @@
-from openai_helper import OpenAIFunctionCall, ChatSession
+"""
+Demonstrates how to execute Python code using openai_helper package.
+"""
 import subprocess
 import tempfile
 import os
+from openai_helper import OpenAIFunctionCall, ChatSession
 
 functions = OpenAIFunctionCall()
+
 
 @functions.register
 def python_exec(code: str) -> str:
@@ -33,4 +37,6 @@ def python_exec(code: str) -> str:
 
     return output.decode()
 
-chat = ChatSession(functions, model="gpt-4", verbose=True)
+
+if __name__ == "__main__":
+    chat = ChatSession(functions, model="gpt-4", verbose=True)

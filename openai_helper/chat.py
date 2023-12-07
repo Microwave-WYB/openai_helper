@@ -1,15 +1,19 @@
-import time
-import openai
+"""
+This module provides classes and functions to manage a chat session with the OpenAI API.
+"""
 import json
-import tiktoken
 from typing import Dict, Union, List, Tuple, Literal
+
+import openai
+import tiktoken
+
 from .function_call import OpenAIFunctionCall
 
 _ASSISTANT_PROMPT = "Assistant:\n    {content}"
 _USER_PROMPT = "User:\n    "
 
 
-def count_token(input: str) -> int:
+def count_token(text: str) -> int:
     """
     Count the number of tokens in a string.
 
@@ -20,13 +24,17 @@ def count_token(input: str) -> int:
         int: Number of tokens.
     """
     enc = tiktoken.get_encoding("cl100k_base")
-    return len(enc.encode(input))
+    return len(enc.encode(text))
 
 
 CompactingMethod = Literal["fifo", "summarize"]
 
 
 class HistoryManager:
+    """
+    Class to manage the message history.
+    """
+
     def __init__(
         self,
         token_threshold: int = 2000,
@@ -34,7 +42,7 @@ class HistoryManager:
         compacting_method: CompactingMethod = "fifo",
         keep_top: int = 1,
         keep_bottom: int = 6,
-        messages: List[Dict[str, str]] = [],
+        messages: List[Dict[str, str]] = None,
         verbose: bool = False,
     ) -> None:
         """
@@ -83,6 +91,8 @@ class HistoryManager:
         """
         Compact the message history using the specified compacting method.
         """
+        if self.verbose:
+            print(f"Compacted messages. Current token count: {self.get_total_tokens()}")
 
         if self.compacting_method == "fifo":
             total_tokens = self.get_total_tokens()
@@ -109,9 +119,8 @@ class HistoryManager:
             raise NotImplementedError(
                 "Summarization compacting method not implemented yet."
             )
-
-        if self.verbose:
-            print(f"Compacted messages. Current token count: {self.get_total_tokens()}")
+        else:
+            raise ValueError(f"Unknown compacting method: {self.compacting_method}")
 
     def add(self, message: Dict[str, str]) -> None:
         """
@@ -131,12 +140,20 @@ class HistoryManager:
         assert (
             count_token(message["content"]) <= self.max_tokens
         ), "Message exceeds maximum token count"
+        if self.messages is None:
+            self.messages = []
+        if self.all_messages is None:
+            self.all_messages = []
         self.all_messages.append(message)
         self.messages.append(message)
         self.compact()
 
 
 class ChatSession:
+    """
+    Class to manage a chat session.
+    """
+
     def __init__(
         self,
         functions: OpenAIFunctionCall = None,
@@ -251,7 +268,9 @@ class ChatSession:
 
                 # Send the message to the API
                 history_manager.add({"role": "user", "content": user_message})
-                response, function_call_info = self.send_messages(history_manager.messages, **kwargs)
+                response, function_call_info = self.send_messages(
+                    history_manager.messages, **kwargs
+                )
 
                 # Print out the response content
                 assistant_message = response["choices"][0]["message"]["content"]
@@ -278,7 +297,9 @@ class ChatSession:
                         history_manager.add(function_response)
 
                         # Send the updated messages back to the model
-                        response, function_call_info = self.send_messages(history_manager.messages, **kwargs)
+                        response, function_call_info = self.send_messages(
+                            history_manager.messages, **kwargs
+                        )
 
                         # Print out the response content
                         follow_up_message = response["choices"][0]["message"]["content"]
@@ -286,8 +307,9 @@ class ChatSession:
                             print(_ASSISTANT_PROMPT.format(content=follow_up_message))
 
                     else:
+                        # If user skips the function call, break from the function handling loop
                         print("Function call skipped.")
-                        break  # If user skips the function call, break from the function handling loop
+                        break
 
             except EOFError:
                 print("Ending chat session.")
