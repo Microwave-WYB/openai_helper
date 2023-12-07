@@ -274,7 +274,6 @@ class ChatSession:
                 # Continuously handle function calls until there are none
                 while response.choices[0].finish_reason == "function_call":
                     function_name = function_call.name
-                    function_args = json.loads(function_call.arguments)
                     print(f"Calling function: {function_name}")
                     print(f"Arguments: {function_call.arguments}}}")
 
