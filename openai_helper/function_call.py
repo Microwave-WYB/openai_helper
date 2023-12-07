@@ -73,11 +73,13 @@ def generate_function_object(function_name: str, docstring: str, cache: dict) ->
             function_name=function_name, docstring=docstring
         ),
     }
+    client = openai.OpenAI()
     response = (
-        openai.ChatCompletion.create(
-            model="gpt-4",
+        client.chat.completions.create(
+            model="gpt-3.5-turbo-1106",
             messages=[system_message, user_message],
             temperature=0,
+            response_format={"type": "json_object"},
         )
         .choices[0]
         .message.content
@@ -93,7 +95,7 @@ def generate_function_object(function_name: str, docstring: str, cache: dict) ->
     return function_object
 
 
-class OpenAIFunctionCall:
+class FunctionCallManager:
     """
     A class to handle calling functions.
     """
@@ -148,10 +150,5 @@ class OpenAIFunctionCall:
             raise ValueError(f"Function {function_name} not registered.")
         func = self.functions[function_name]["callable"]
         # return func(*args, **kwargs)
-        try:
-            return str(func(*args, **kwargs))
-        except TypeError as e:
-            # function output must be able to be converted to string
-            raise TypeError(
-                f"Function {function_name} output must be able to be converted to string."
-            ) from e
+        output = func(*args, **kwargs)
+        return str(output)
