@@ -2,12 +2,16 @@
 This module provides classes and functions to manage a chat session with the OpenAI API.
 """
 import json
-from typing import Dict, Union, List, Tuple, Literal
+from typing import Dict, List, Literal
 
 import openai
+from openai.types.chat.chat_completion_message import (
+    ChatCompletionMessage,
+    FunctionCall,
+)
 import tiktoken
 
-from .function_call import OpenAIFunctionCall
+from .function_call import FunctionCallManager
 
 _ASSISTANT_PROMPT = "Assistant:\n    {content}"
 _USER_PROMPT = "User:\n    "
@@ -156,7 +160,7 @@ class ChatSession:
 
     def __init__(
         self,
-        functions: OpenAIFunctionCall = None,
+        functions: FunctionCallManager = None,
         model: str = "gpt-3.5-turbo",
         verbose: bool = False,
     ) -> None:
@@ -170,13 +174,14 @@ class ChatSession:
         """
         self.functions = functions
         self.model = model
+        self.client = openai.OpenAI()
         self.verbose = verbose
 
     def send_messages(
         self,
         messages: List[Dict[str, str]],
         **kwargs,
-    ) -> Tuple[Dict, Union[None, Dict]]:
+    ) -> ChatCompletionMessage:
         """
         Send messages using OpenAI API. Allow all OpenAI API keyword args.
 
@@ -184,7 +189,7 @@ class ChatSession:
             messages (List[Dict[str, str]]): List of messages to send
 
         Returns:
-            Tuple[Dict, Union[None, Dict]]: response, function_call_info
+            ChatCompletionMessage: Response from OpenAI API.
         """
         args = {
             "model": self.model,
@@ -194,45 +199,35 @@ class ChatSession:
         if self.functions and self.functions.functions:
             args["functions"] = [f["info"] for f in self.functions.functions.values()]
 
-        response = openai.ChatCompletion.create(
+        response = self.client.chat.completions.create(
             **args,
             **kwargs,
         )
 
-        # Extract the function call if present
-        function_call_info = None
-        assistant_response = response["choices"][0]["message"]
-        if "function_call" in assistant_response:
-            function_call_info = {
-                "name": assistant_response["function_call"]["name"],
-                "arguments": json.loads(
-                    assistant_response["function_call"]["arguments"]
-                ),
-            }
-
-        return response, function_call_info
+        return response
 
     def handle_function(
         self,
-        function_call: Dict,
+        function_call: FunctionCall,
         verbose: bool = False,
     ) -> Dict:
         """
         Handle a function call from the OpenAI API.
 
         Args:
-            function_call (Dict): Function call info from the OpenAI API
+            function_call (FunctionCall): Function call object from OpenAI API.
             verbose (bool, optional): Whether to print debug info. Defaults to False.
 
         Returns:
             Dict: A dictionary containing the function's role, name, and content, which includes both the input arguments and the output.
         """
-        function_name = function_call["name"]
-        function_args = function_call["arguments"]
+        function_name = function_call.name
+        function_args = json.loads(function_call.arguments)
         function_output = self.functions.call(function_name, **function_args)
 
         if verbose:
-            print(f"Function call: {function_call}")
+            print(f"Function name: {function_name}")
+            print(f"Function arguments:\n{function_args}")
             print(f"Function output: {function_output}")
 
         # Prepare the content string with input arguments and output
@@ -268,21 +263,20 @@ class ChatSession:
 
                 # Send the message to the API
                 history_manager.add({"role": "user", "content": user_message})
-                response, function_call_info = self.send_messages(
-                    history_manager.messages, **kwargs
-                )
+                response = self.send_messages(history_manager.messages, **kwargs)
+                function_call = response.choices[0].message.function_call
 
                 # Print out the response content
-                assistant_message = response["choices"][0]["message"]["content"]
+                assistant_message = response.choices[0].message.content
                 if assistant_message is not None:
                     print(_ASSISTANT_PROMPT.format(content=assistant_message))
 
                 # Continuously handle function calls until there are none
-                while function_call_info:
-                    print(f"Calling function: {function_call_info['name']}")
-                    print("Arguments:")
-                    for arg, val in function_call_info["arguments"].items():
-                        print(f"    {arg}: {val}")
+                while response.choices[0].finish_reason == "function_call":
+                    function_name = function_call.name
+                    function_args = json.loads(function_call.arguments)
+                    print(f"Calling function: {function_name}")
+                    print(f"Arguments: {function_call.arguments}}}")
 
                     confirmation = None
                     if no_confirm:
@@ -292,17 +286,17 @@ class ChatSession:
 
                     if confirmation in ["y", ""]:
                         function_response = self.handle_function(
-                            function_call_info, self.verbose
+                            function_call, self.verbose
                         )
                         history_manager.add(function_response)
 
                         # Send the updated messages back to the model
-                        response, function_call_info = self.send_messages(
+                        response = self.send_messages(
                             history_manager.messages, **kwargs
                         )
 
                         # Print out the response content
-                        follow_up_message = response["choices"][0]["message"]["content"]
+                        follow_up_message = response.choices[0].message.content
                         if follow_up_message is not None:
                             print(_ASSISTANT_PROMPT.format(content=follow_up_message))
 

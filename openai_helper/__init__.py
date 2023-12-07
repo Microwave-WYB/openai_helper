@@ -1,2 +1,2 @@
-from .function_call import OpenAIFunctionCall
+from .function_call import FunctionCallManager
 from .chat import ChatSession, HistoryManager

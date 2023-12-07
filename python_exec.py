@@ -4,9 +4,9 @@ Demonstrates how to execute Python code using openai_helper package.
 import subprocess
 import tempfile
 import os
-from openai_helper import OpenAIFunctionCall, ChatSession
+from openai_helper import FunctionCallManager, ChatSession
 
-functions = OpenAIFunctionCall()
+functions = FunctionCallManager()
 
 
 @functions.register

@@ -3,9 +3,9 @@ Demonstrates how to use the openai_helper package to create a chatbot that can g
 random numbers in a CLI interface.
 """
 from random import randint
-from openai_helper import OpenAIFunctionCall, ChatSession, HistoryManager
+from openai_helper import FunctionCallManager, ChatSession, HistoryManager
 
-functions = OpenAIFunctionCall()
+functions = FunctionCallManager()
 
 
 @functions.register
@@ -14,8 +14,8 @@ def random_number(min_number: int, max_number: int) -> int:
     Generate a random number from min to max.
 
     Args:
-        min (int): The minimum bound for the random number.
-        max (int): The maximum bound for the random number.
+        min_number (int): The minimum bound for the random number.
+        max_number (int): The maximum bound for the random number.
 
     Returns:
         int: A random number between min and max.
