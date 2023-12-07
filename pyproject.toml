@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 
 [project]
 name = "openai_helper"
-version = "0.1.0"
+version = "2023.12.07"
 description = "A helper library for OpenAI."
 authors = [{"name" = "Yibo Wei", "email" = "david_wyb2001@outlook.com"}]
 license = { text = "MIT" }
